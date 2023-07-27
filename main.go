@@ -17,70 +17,32 @@ import (
 
 var dirPath string
 
-// TAMBAH JUGA KALO PNG convert ke webp dan avif
-// mainin di konversi quality
-//
-
 func main() {
-	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\ke2.jpg"
+	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\simon.jpg"
 	outputDirPath := "C:\\Users\\User\\Desktop\\imageResizer\\outputs"
 
-	// cek dulu apakah file nya png atau bukan
+	getFormat := filepath.Ext(inputFilePath)
+	maxAllowedWidth := 1920
+
 	size, err := getImageWidth(inputFilePath)
 	if err != nil {
 		panic(err)
 	}
 
-	getFormat := filepath.Ext(inputFilePath)
-	maxAllowedWidth := 1600
-
-	if getFormat == ".png" {
-
-		if *size > maxAllowedWidth {
-			resizedOutputPath := fmt.Sprintf("%s%s%s.png", outputDirPath, string(os.PathSeparator), "temp")
-
-			resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 80)
-			if err != nil {
-				log.Fatal("Error resizing image:", err)
-			}
-			inputFilePath = *resizeDir
-		}
-
-		thumbnailCh := make(chan *string)
-		go func() {
-			dirThumbnail := "C:\\Users\\User\\Desktop\\imageResizer\\outputs\\thumnail"
-			outputThumnail := fmt.Sprintf("%s%s%s.png", dirThumbnail, string(os.PathSeparator), uuid.New())
-			thumnailOutputPath, err := CreateThumbnail(inputFilePath, outputThumnail, 280)
-			if err != nil {
-				log.Println("Error converting to WebP:", err)
-				thumbnailCh <- nil
-				return
-			}
-			thumbnailCh <- thumnailOutputPath
-		}()
-		thumbnailResult := <-thumbnailCh
-
-		if thumbnailResult != nil {
-			fmt.Println("WebP Conversion completed successfully:", *thumbnailResult)
-		}
-
-		return
-	}
-
 	if *size > maxAllowedWidth {
-		fmt.Println("size is larger than 1920")
-		resizedOutputPath := fmt.Sprintf("%s%s%s.jpg", outputDirPath, string(os.PathSeparator), uuid.New())
-		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 80)
+		resizedOutputPath := fmt.Sprintf("%s%s%s%s", outputDirPath, string(os.PathSeparator), "temp", getFormat)
+
+		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 70, maxAllowedWidth)
 		if err != nil {
 			log.Fatal("Error resizing image:", err)
 		}
-		fmt.Println(*resizeDir)
 		inputFilePath = *resizeDir
 	}
-	concurrentConvert(inputFilePath, outputDirPath)
+
+	concurrentConvert(inputFilePath, outputDirPath, getFormat)
 }
 
-func concurrentConvert(inputFilePath, outputDirPath string) {
+func concurrentConvert(inputFilePath string, outputDirPath string, inputType string) {
 	webpCh := make(chan *string)
 	avifCh := make(chan *string)
 	thumbnailCh := make(chan *string)
@@ -88,8 +50,8 @@ func concurrentConvert(inputFilePath, outputDirPath string) {
 	// Create Thumnail
 	go func() {
 		dirThumbnail := "C:\\Users\\User\\Desktop\\imageResizer\\outputs\\thumnail"
-		outputThumnail := fmt.Sprintf("%s%s%s.webp", dirThumbnail, string(os.PathSeparator), uuid.New())
-		thumnailOutputPath, err := CreateThumbnail(inputFilePath, outputThumnail, 280)
+		outputThumnail := fmt.Sprintf("%s%s%s%s", dirThumbnail, string(os.PathSeparator), uuid.New(), inputType)
+		thumnailOutputPath, err := CreateThumbnail(inputFilePath, outputThumnail, 480, 70)
 		if err != nil {
 			log.Println("Error converting to WebP:", err)
 			thumbnailCh <- nil
@@ -135,13 +97,13 @@ func concurrentConvert(inputFilePath, outputDirPath string) {
 	}
 }
 
-func ResizeImage(filePath string, outDir string, quality int) (*string, error) {
+func ResizeImage(filePath string, outDir string, quality int, desiredWidth int) (*string, error) {
 	if _, err := os.Stat(filePath); err != nil {
 		return nil, err
 	}
 
 	startTime := time.Now()
-	_, err := exec.Command("magick", filePath, "-resize", "1600x", "-quality", fmt.Sprintf("%d", quality), outDir).Output()
+	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%dx", desiredWidth), "-quality", fmt.Sprintf("%d", quality), outDir).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -151,13 +113,29 @@ func ResizeImage(filePath string, outDir string, quality int) (*string, error) {
 	return &outDir, nil
 }
 
-func CreateThumbnail(filePath string, outDir string, thumbSize int) (*string, error) {
+// func CreateThumbnail(filePath string, outDir string, thumbSize int) (*string, error) {
+// 	startTime := time.Now()
+// 	if _, err := os.Stat(filePath); err != nil {
+// 		return nil, err
+// 	}
+
+// 	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d", thumbSize), "-quality", "80", outDir).Output()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	duration := time.Since(startTime).Seconds()
+// 	fmt.Println(fmt.Sprintf("Thumnail Image time duration : %fs", duration))
+// 	return &outDir, nil
+// }
+
+func CreateThumbnail(filePath string, outDir string, thumbSize int, quality int) (*string, error) {
 	startTime := time.Now()
 	if _, err := os.Stat(filePath); err != nil {
 		return nil, err
 	}
 
-	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d", thumbSize), "-quality", "80", outDir).Output()
+	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d", thumbSize), "-quality", fmt.Sprintf("%d", quality), outDir).Output()
 	if err != nil {
 		return nil, err
 	}
