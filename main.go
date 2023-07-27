@@ -17,6 +17,10 @@ import (
 
 var dirPath string
 
+// TAMBAH JUGA KALO PNG convert ke webp dan avif
+// mainin di konversi quality
+//
+
 func main() {
 	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\ke2.jpg"
 	outputDirPath := "C:\\Users\\User\\Desktop\\imageResizer\\outputs"
@@ -28,9 +32,11 @@ func main() {
 	}
 
 	getFormat := filepath.Ext(inputFilePath)
+	maxAllowedWidth := 1600
+
 	if getFormat == ".png" {
 
-		if *size > 1920 {
+		if *size > maxAllowedWidth {
 			resizedOutputPath := fmt.Sprintf("%s%s%s.png", outputDirPath, string(os.PathSeparator), "temp")
 
 			resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 80)
@@ -61,7 +67,8 @@ func main() {
 		return
 	}
 
-	if *size > 1920 {
+	if *size > maxAllowedWidth {
+		fmt.Println("size is larger than 1920")
 		resizedOutputPath := fmt.Sprintf("%s%s%s.jpg", outputDirPath, string(os.PathSeparator), uuid.New())
 		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 80)
 		if err != nil {
@@ -104,7 +111,7 @@ func concurrentConvert(inputFilePath, outputDirPath string) {
 
 	// Convert to AVIF
 	go func() {
-		avifOutputPath, err := convertToAvif(inputFilePath, outputDirPath, 80, 3)
+		avifOutputPath, err := convertToAvif(inputFilePath, outputDirPath, 80, 6)
 		if err != nil {
 			log.Println("Error converting to AVIF:", err)
 			avifCh <- nil
@@ -134,7 +141,7 @@ func ResizeImage(filePath string, outDir string, quality int) (*string, error) {
 	}
 
 	startTime := time.Now()
-	_, err := exec.Command("magick", filePath, "-resize", "1920x", "-quality", fmt.Sprintf("%d", quality), outDir).Output()
+	_, err := exec.Command("magick", filePath, "-resize", "1600x", "-quality", fmt.Sprintf("%d", quality), outDir).Output()
 	if err != nil {
 		return nil, err
 	}
