@@ -18,7 +18,7 @@ import (
 var dirPath string
 
 func main() {
-	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\4k.png"
+	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\ke2.jpg"
 	outputDirPath := "C:\\Users\\User\\Desktop\\imageResizer\\outputs"
 
 	// cek dulu apakah file nya png atau bukan
@@ -29,10 +29,9 @@ func main() {
 
 	getFormat := filepath.Ext(inputFilePath)
 	if getFormat == ".png" {
-		// cek ukuran gambar
+
 		if *size > 1920 {
 			resizedOutputPath := fmt.Sprintf("%s%s%s.png", outputDirPath, string(os.PathSeparator), "temp")
-			// resizedOutputPath := fmt.Sprintf("%s%s%s.png", outputDirPath, string(os.PathSeparator), uuid.New())
 
 			resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 80)
 			if err != nil {
