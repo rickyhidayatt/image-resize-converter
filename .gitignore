@@ -1,3 +1,2 @@
-outputs/samples/config.ini
-outputs/thumnail/config.ini
-.gitignore
+outputs/samples/*
+outputs/thumnail/*

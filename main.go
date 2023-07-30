@@ -6,6 +6,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,13 +17,18 @@ import (
 )
 
 var dirPath string
+var quality *int
 
 func main() {
+	startTime := time.Now()
 	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\simon.jpg"
 	outputDirPath := "C:\\Users\\User\\Desktop\\imageResizer\\outputs"
 
 	getFormat := filepath.Ext(inputFilePath)
-	maxAllowedWidth := 1920
+	maxAllowedWidth := 1860
+	defaultQuality := 80
+
+	quality = &defaultQuality
 
 	size, err := getImageWidth(inputFilePath)
 	if err != nil {
@@ -30,16 +36,32 @@ func main() {
 	}
 
 	if *size > maxAllowedWidth {
+		resizePercent := 100 - int(math.Ceil(float64(float64((*size-maxAllowedWidth))/float64(*size))*100))
+		fmt.Println("size percent =", resizePercent)
+		fmt.Println("width =", maxAllowedWidth)
+
+		maxQuality := 50
+		if resizePercent > maxQuality {
+			q := 50
+			quality = &q
+
+		}
 		resizedOutputPath := fmt.Sprintf("%s%s%s%s", outputDirPath, string(os.PathSeparator), "temp", getFormat)
 
-		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, 70, maxAllowedWidth)
+		fmt.Println("quality :", *quality)
+
+		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, *quality, resizePercent)
 		if err != nil {
 			log.Fatal("Error resizing image:", err)
+
 		}
 		inputFilePath = *resizeDir
 	}
 
 	concurrentConvert(inputFilePath, outputDirPath, getFormat)
+
+	duration := time.Since(startTime).Seconds()
+	fmt.Println(fmt.Sprintf("Whole process took %fs", duration))
 }
 
 func concurrentConvert(inputFilePath string, outputDirPath string, inputType string) {
@@ -47,7 +69,7 @@ func concurrentConvert(inputFilePath string, outputDirPath string, inputType str
 	avifCh := make(chan *string)
 	thumbnailCh := make(chan *string)
 
-	// Create Thumnail
+	// Create Thumnail tml
 	go func() {
 		dirThumbnail := "C:\\Users\\User\\Desktop\\imageResizer\\outputs\\thumnail"
 		outputThumnail := fmt.Sprintf("%s%s%s%s", dirThumbnail, string(os.PathSeparator), uuid.New(), inputType)
@@ -60,9 +82,9 @@ func concurrentConvert(inputFilePath string, outputDirPath string, inputType str
 		thumbnailCh <- thumnailOutputPath
 	}()
 
-	// Convert to WebP
+	// Convert to WebP wbp
 	go func() {
-		webpOutputPath, err := convertToWebP(inputFilePath, outputDirPath, 80, false)
+		webpOutputPath, err := convertToWebP(inputFilePath, outputDirPath, 50, false)
 		if err != nil {
 			log.Println("Error converting to WebP:", err)
 			webpCh <- nil
@@ -71,9 +93,9 @@ func concurrentConvert(inputFilePath string, outputDirPath string, inputType str
 		webpCh <- webpOutputPath
 	}()
 
-	// Convert to AVIF
+	// Convert to AVIF avf
 	go func() {
-		avifOutputPath, err := convertToAvif(inputFilePath, outputDirPath, 80, 6)
+		avifOutputPath, err := convertToAvif(inputFilePath, outputDirPath, 50, 9)
 		if err != nil {
 			log.Println("Error converting to AVIF:", err)
 			avifCh <- nil
@@ -86,14 +108,14 @@ func concurrentConvert(inputFilePath string, outputDirPath string, inputType str
 	avifResult := <-avifCh
 	thumbnailResult := <-thumbnailCh
 
+	if thumbnailResult != nil {
+		fmt.Println("Create Thumnail completed successfully:", *thumbnailResult)
+	}
 	if webpResult != nil {
 		fmt.Println("WebP Conversion completed successfully:", *webpResult)
 	}
 	if avifResult != nil {
 		fmt.Println("AVIF Conversion completed successfully:", *avifResult)
-	}
-	if thumbnailResult != nil {
-		fmt.Println("Create Thumnail completed successfully:", *thumbnailResult)
 	}
 }
 
@@ -103,8 +125,10 @@ func ResizeImage(filePath string, outDir string, quality int, desiredWidth int) 
 	}
 
 	startTime := time.Now()
-	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%dx", desiredWidth), "-quality", fmt.Sprintf("%d", quality), outDir).Output()
+	// fmt.Println("",desiredWidth)
+	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d%%", desiredWidth), "-quality", fmt.Sprintf("%d", quality), outDir).Output()
 	if err != nil {
+		fmt.Println("error resizing")
 		return nil, err
 	}
 
@@ -112,22 +136,6 @@ func ResizeImage(filePath string, outDir string, quality int, desiredWidth int) 
 	fmt.Println(fmt.Sprintf("Resize Image time duration : %fs", duration))
 	return &outDir, nil
 }
-
-// func CreateThumbnail(filePath string, outDir string, thumbSize int) (*string, error) {
-// 	startTime := time.Now()
-// 	if _, err := os.Stat(filePath); err != nil {
-// 		return nil, err
-// 	}
-
-// 	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d", thumbSize), "-quality", "80", outDir).Output()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	duration := time.Since(startTime).Seconds()
-// 	fmt.Println(fmt.Sprintf("Thumnail Image time duration : %fs", duration))
-// 	return &outDir, nil
-// }
 
 func CreateThumbnail(filePath string, outDir string, thumbSize int, quality int) (*string, error) {
 	startTime := time.Now()
@@ -243,4 +251,53 @@ func getImageWidth(filePath string) (*int, error) {
 	}
 
 	return &size, nil
+}
+
+//eksperimen
+
+func convertToAvif2(filePath string, outDir string, quality int, speed int) (*string, error) {
+	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+		return nil, os.ErrNotExist
+	}
+
+	_, err := os.Stat(outDir)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		err = os.Mkdir(outDir, 0755)
+	}
+
+	fileName := uuid.New()
+
+	startTime := time.Now()
+	outputPath := fmt.Sprintf("%s%s%s.avif", outDir, string(os.PathSeparator), fileName)
+	_, err = exec.Command(
+		"magick",
+		filePath,
+		"-quality",
+		strconv.FormatInt(int64(quality), 10),
+		outputPath,
+	).Output()
+
+	if err != nil {
+		return nil, err
+	}
+
+	duration := time.Since(startTime).Seconds()
+	fmt.Println(fmt.Sprintf("Converting Image to AVIF took %fs", duration))
+	return &outputPath, nil
+}
+
+func ResizeImage2(filePath string, outDir string, desiredWidth int) (*string, error) {
+	if _, err := os.Stat(filePath); err != nil {
+		return nil, err
+	}
+
+	startTime := time.Now()
+	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%dx", desiredWidth), "-layers", "optimize", outDir).Output()
+	if err != nil {
+		return nil, err
+	}
+
+	duration := time.Since(startTime).Seconds()
+	fmt.Println(fmt.Sprintf("Resize Image time duration : %fs", duration))
+	return &outDir, nil
 }
