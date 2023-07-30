@@ -21,15 +21,15 @@ var quality *int
 
 func main() {
 	startTime := time.Now()
-	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\simon.jpg"
+	inputFilePath := "C:\\Users\\User\\Desktop\\imageResizer\\samples\\YOUR_IMAGE.JPG"
 	outputDirPath := "C:\\Users\\User\\Desktop\\imageResizer\\outputs"
 
-	getFormat := filepath.Ext(inputFilePath)
+	// tentukan lebar gambar yang di inginkan
 	maxAllowedWidth := 1860
 	defaultQuality := 80
 
+	getFormat := filepath.Ext(inputFilePath)
 	quality = &defaultQuality
-
 	size, err := getImageWidth(inputFilePath)
 	if err != nil {
 		panic(err)
@@ -47,7 +47,6 @@ func main() {
 
 		}
 		resizedOutputPath := fmt.Sprintf("%s%s%s%s", outputDirPath, string(os.PathSeparator), "temp", getFormat)
-
 		fmt.Println("quality :", *quality)
 
 		resizeDir, err := ResizeImage(inputFilePath, resizedOutputPath, *quality, resizePercent)
@@ -59,7 +58,6 @@ func main() {
 	}
 
 	concurrentConvert(inputFilePath, outputDirPath, getFormat)
-
 	duration := time.Since(startTime).Seconds()
 	fmt.Println(fmt.Sprintf("Whole process took %fs", duration))
 }
@@ -125,7 +123,6 @@ func ResizeImage(filePath string, outDir string, quality int, desiredWidth int) 
 	}
 
 	startTime := time.Now()
-	// fmt.Println("",desiredWidth)
 	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%d%%", desiredWidth), "-quality", fmt.Sprintf("%d", quality), outDir).Output()
 	if err != nil {
 		fmt.Println("error resizing")
@@ -251,53 +248,4 @@ func getImageWidth(filePath string) (*int, error) {
 	}
 
 	return &size, nil
-}
-
-//eksperimen
-
-func convertToAvif2(filePath string, outDir string, quality int, speed int) (*string, error) {
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		return nil, os.ErrNotExist
-	}
-
-	_, err := os.Stat(outDir)
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		err = os.Mkdir(outDir, 0755)
-	}
-
-	fileName := uuid.New()
-
-	startTime := time.Now()
-	outputPath := fmt.Sprintf("%s%s%s.avif", outDir, string(os.PathSeparator), fileName)
-	_, err = exec.Command(
-		"magick",
-		filePath,
-		"-quality",
-		strconv.FormatInt(int64(quality), 10),
-		outputPath,
-	).Output()
-
-	if err != nil {
-		return nil, err
-	}
-
-	duration := time.Since(startTime).Seconds()
-	fmt.Println(fmt.Sprintf("Converting Image to AVIF took %fs", duration))
-	return &outputPath, nil
-}
-
-func ResizeImage2(filePath string, outDir string, desiredWidth int) (*string, error) {
-	if _, err := os.Stat(filePath); err != nil {
-		return nil, err
-	}
-
-	startTime := time.Now()
-	_, err := exec.Command("magick", filePath, "-resize", fmt.Sprintf("%dx", desiredWidth), "-layers", "optimize", outDir).Output()
-	if err != nil {
-		return nil, err
-	}
-
-	duration := time.Since(startTime).Seconds()
-	fmt.Println(fmt.Sprintf("Resize Image time duration : %fs", duration))
-	return &outDir, nil
 }
